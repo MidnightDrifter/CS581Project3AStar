@@ -62,6 +62,9 @@ class Astar {
             solution.clear();
             Heuristic heuristic;
             //heuristic from start to goal
+			typename GraphType::Vertex const& vertex_start = graph.GetVertex(start_id);
+			typename GraphType::Vertex const& vertex_goal = graph.GetVertex(goal_id);
+
             typename Heuristic::ReturnType h = heuristic( graph,graph.GetVertex(start_id),graph.GetVertex(goal_id) );
 			//Heuristic--graph, ID of first vertex to check, ID of second vertex to check
 
@@ -91,6 +94,9 @@ class Astar {
 			//Push starting node onto openList (presumably priority queue) w/ priority h + g
 			// h = heuristic val, g =0
 
+
+
+			openList.push(vertex_start);
 
             while ( openList.size() > 0 ) {
                 callback.OnIteration( *this );
