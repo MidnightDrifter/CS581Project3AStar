@@ -97,6 +97,7 @@ class Astar {
 
 
 			openList.push(vertex_start);
+			typename GraphType::Vertex currentNode;
 
             while ( openList.size() > 0 ) {
                 callback.OnIteration( *this );
@@ -116,6 +117,18 @@ class Astar {
 				//If a child is NOT on it, push it onto the openList w/ priority g + h
 
 				//RINSE AND REPEAT
+
+				currentNode = openList.pop();
+				if (currentNode == vertex_goal)
+				{
+					while (currentNode != vertex_start)
+					{
+						solution.push_back(currentNode));
+						currentNode = currentNode.parent;  //???
+					}
+					break;
+				}
+				
 
 
             }
