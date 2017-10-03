@@ -12,7 +12,8 @@ template<typename NodeType, typename EdgeType>
 class Node
 {
 private:
-	size_t node, parentNode;
+	Node*  parentNode;
+	NodeType* node;
 	typename Heuristic::ReturnType h;
 	typename Heuristic::ReturnType g;   //Check this, might just be float??
 	//float g;
@@ -20,18 +21,29 @@ private:
 	
 
 public:
-	Node(NodeType& n, Heuristic::ReturnType h1, float g1) : node(n.GetID()), g(g1), h(h1), p(std::numeric_limits<size_t>::max()) {}
-	Node(NodeType& n, Heuristic::ReturnType h1, float g1, NodeType& p) : node(n.GetID()), g(g1), h(h1), p(p.GetID()) {}
+	Node(NodeType& n, Heuristic::ReturnType h1, float g1) : node(&n), g(g1), h(h1), p(NULL) {}
+	Node(NodeType& n, Heuristic::ReturnType h1, float g1, Node& p) : node(&n), g(g1), h(h1), parentNode(&p) {}
 	Node(Node& other) : node(other.getNode()), parentNode(other.getParentNode()), g(other.getG()), h(other.getH()) {}
 	
 	typename Heuristic::ReturnType getScore() { return h + g; }
-	size_t GetID() const { return node.GetID(); }
+	size_t GetID() const { return node->GetID(); }
 	typename Heuristic::ReturnType getG() const{ return g; }
 	typename Heuristic::ReturnType getH() const { return h; }
-	size_t getNode() const { return node; }
-	size_t getParentNode() const { return node; }
+	NodeType* getNode() const { return node; }
+	Node* getParentNode() const { return parentNode; }
 
+	const Node& operator=(const Node& other)
+	{
+		if (*this != other)
+		{
+			node = other.getNode();
+			g = other.getG();
+			h = other.getH();
+			parentNode = other.getParentNode();
+		}
 
+		return *this;
+	}
 
 	bool operator<(const Node& other) { return  this->getScore() < other.getScore(); }
 	bool operator>(const Node& other) { return this->getScore > other.getScore(); }
@@ -121,68 +133,148 @@ class Astar {
 			//Heuristic--graph, ID of first vertex to check, ID of second vertex to check
 
 
-			/*Edges seem to have:  getID1(), getID2()  --  from vertex w/ ID1 to vertex w/ ID2
-			getWeight()  -- self explanatory
+/*Edges seem to have:  getID1(), getID2()  --  from vertex w/ ID1 to vertex w/ ID2
+getWeight()  -- self explanatory
 
 
 
 
-			Vertices seem to have:   getID(), getName(), -- self explanatory
-			some flavor of container / list that is  outgoing_edges[],
+Vertices seem to have:   getID(), getName(), -- self explanatory
+some flavor of container / list that is  outgoing_edges[],
 
-			some kind of operator= op. -- implementation seems to depend on the ID
-
-
-
-			Graphs seem to have:  
-			
-			
-			// maps vertex to a vector of outgoing edges,
-			// adjacency list
-			std::map< VertexType, std::vector<EdgeType> > outgoining_edges;
-			
-			*/
-
-			//Push starting node onto openList (presumably priority queue) w/ priority h + g
-			// h = heuristic val, g =0
+some kind of operator= op. -- implementation seems to depend on the ID
 
 
 
-			openList.push(vertex_start);
-			typename GraphType::Vertex currentNode;
+Graphs seem to have:
 
-            while ( openList.size() > 0 ) {
-                callback.OnIteration( *this );
 
-				//Pop node off of openList
-				//Check if it's the goal
-				
-				
-				//If it is,  step back through the solution until you get to the starting node, then push that path into the solution, then break out & return
+// maps vertex to a vector of outgoing edges,
+// adjacency list
+std::map< VertexType, std::vector<EdgeType> > outgoining_edges;
 
-				//Else, expand node
-				//For each child, calculate its current cost: g = (parent's g + the edge it took to get here) +  h = (its heuristic value)
-				//Check the closed list:  if a child is on it, check if the current node's g  (or g + h, potentially)  is <= than the one on the closed list
-				//If the closed list is greater, simply discard & ignore that child.   Or is it push it onto the closed list?   CHECK THIS STEP AAAAA
-				//Otherwise, remove that node from the closed list, and push the current node onto the openList
+*/
 
-				//If a child is NOT on it, push it onto the openList w/ priority g + h
+//Push starting node onto openList (presumably priority queue) w/ priority h + g
+// h = heuristic val, g =0
 
-				//RINSE AND REPEAT
 
-				currentNode = openList.pop();
-				if (currentNode == vertex_goal)
+
+//openList.push(Node(vertex_start));
+//typename GraphType::Vertex currentNode;
+Node<GraphType::Vertex, GraphType::Edge> currentNode(vertex_start, h, 0), childNode(vertex_start,h,0);
+openList.push(vertex_start);
+while (openList.size() > 0) {
+	callback.OnIteration(*this);
+
+	//Pop node off of openList
+	//Check if it's the goal
+
+
+	//If it is,  step back through the solution until you get to the starting node, then push that path into the solution, then break out & return
+
+	//Else, expand node
+	//For each child, calculate its current cost: g = (parent's g + the edge it took to get here) +  h = (its heuristic value)
+	//Check the closed list:  if a child is on it, check if the current node's g  (or g + h, potentially)  is <= than the one on the closed list
+	//If the closed list is greater, simply discard & ignore that child.   Or is it push it onto the closed list?   CHECK THIS STEP AAAAA
+	//Otherwise, remove that node from the closed list, and push the current node onto the openList
+
+	//If a child is NOT on it, push it onto the openList w/ priority g + h
+
+	//RINSE AND REPEAT
+	currentNode = openList.top();
+	openList.pop();
+	//currentNode = openList.pop();
+	if (currentNode.GetID() == vertex_goal)
+	{
+		while (currentNode.GetID() != vertex_start)
+		{
+			GraphType::Edge e;
+			std::vector<GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
+			for (int i = 0; i < outedges.size(); i++)
+			{
+				if ((outedges[i].GetID1() == currentNode.GetID() && outedges[i].GetID2() == currentNode.getParentNode()->GetID()) || (outedges[i].GetID2() == currentNode.GetID() && outedges[i].GetID1() == currentNode.getParentNode()->GetID()))
 				{
-					while (currentNode != vertex_start)
-					{
-						solution.push_back(currentNode));
-						currentNode = currentNode.parent;  //???
-					}
-					break;
+					solution.push_back(outedges[i]);
+					i = outedges.size();
 				}
+
+			}
+			//solution.push_back(currentNode));
+			currentNode = currentNode->getParentNode();  //???
+		}
+		break;
+	}
+
+	//End solution pushing
+
+
+
+
+
+	//Is the 'g' value just the edge length + the parent's 'g value, or the edge length + the parent's 'g + h' value?
+	//Think just the edge + g
+	std::vector<GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
+	size_t childID;
+	//float gHolder;
+	//Heuristic::ReturnType hHolder;
+//	bool poppedFromClosedList = false, isOnClosedList=false;
+
+
+
+	//Expand node!
+	bool isOnClosedList = false;
+	for (int i = 0; i < outedges.size();i++)
+	{
+	//	gHolder = currentNode.getG() + outedges[i].GetWeight();
+		isOnClosedList = false;
+
+		childID = outedges[i].getID1();
+		
+		
+		if (outedges[i].GetID1() == currentNode.GetID())
+		{
+			childID = outedges[i].GetID2();
+		}
+
+
+		childNode = Node(graph.GetVertex(childID), heuristic(graph, graph.GetVertex(childID), vertex_goal), currentNode.getG() + outedges[i].GetWeight(), currentNode)
+		//hHolder = Heuristic(graph, graph.GetVertex(otherID), vertex_goal);
+
+		//Check the closed list:  if a child is on it, check if the current node's g  (or g + h, potentially)  is <= than the one on the closed list
+		//If the closed list is greater, simply discard & ignore that child.   Or is it push it onto the closed list?   CHECK THIS STEP AAAAA
+		//Otherwise, remove that node from the closed list, and push the current node onto the openList
+
+		for (auto j = closedList.begin(); j!= closedList.end();j++)
+		{
+			if (childID == j->GetID())
+			{
+				isOnClosedList = true;
+				if (childNode.getG() <= j->getG())
+				{
+					openList.push(childNode);
+					//openList.push(Node(currentNode->getNode(), hHolder, gHolder, currentNode));
+					closedList.remove(*j);  //Remove at iterator j?   Also check this
+					//Push current node, or child node?   CHECK THIS!!
 				
+					
+				//	poppedFromClosedList = true;
+				}
+				j = closedList.end();
+			}
+		}
+	
+		if (!isOnClosedList)
+		{
+			openList.push(childNode);
+		}
 
 
+
+					//openList.push(Node(graph.GetVertex(childID, heuristic(graph, graph.GetVertex(childID), vertex_goal), currentNode.getG() + outedges[i].GetWeight(), &currentNode);
+				}
+
+				
             }
 
 
@@ -198,9 +290,9 @@ class Astar {
         Callback<GraphType,Astar>  & callback;
         // the next 4 lines are just sugestions
         // OpenListContainer, ClosedListContainer, SolutionContainer are typedefed
-      std::priority_queue<Node>  OpenListContainer            openList;
-      std::list<Node>  ClosedListContainer          closedList;
-        SolutionContainer            solution;
+      std::priority_queue<Node>  openList;  //OpenListContainer             
+	  std::list<Node>         closedList;  //ClosedListContainer   
+        std::vector<GraphType::Edge>           solution;    //SolutionContainer
         size_t                       start_id,goal_id;
 };
 
