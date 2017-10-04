@@ -98,7 +98,7 @@ class Astar {
 
 			openList.push(vertex_start);
 			typename GraphType::Vertex currentNode;
-
+			typename GraphType::Edge currentEdge;
             while ( openList.size() > 0 ) {
                 callback.OnIteration( *this );
 
