@@ -1,6 +1,58 @@
 #ifndef ASTAR
 #define ASTAR
 
+#include <list>
+#include <vector>
+#include <queue>
+#include <limits>
+
+
+
+template<typename NodeType, typename EdgeType>
+class Node
+{
+private:
+	size_t node, parentNode;
+	typename Heuristic::ReturnType h;
+	typename Heuristic::ReturnType g;   //Check this, might just be float??
+	//float g;
+
+	
+
+public:
+	Node(NodeType& n, Heuristic::ReturnType h1, float g1) : node(n.GetID()), g(g1), h(h1), p(std::numeric_limits<size_t>::max()) {}
+	Node(NodeType& n, Heuristic::ReturnType h1, float g1, NodeType& p) : node(n.GetID()), g(g1), h(h1), p(p.GetID()) {}
+	Node(Node& other) : node(other.getNode()), parentNode(other.getParentNode()), g(other.getG()), h(other.getH()) {}
+	
+	typename Heuristic::ReturnType getScore() { return h + g; }
+	size_t GetID() const { return node.GetID(); }
+	typename Heuristic::ReturnType getG() const{ return g; }
+	typename Heuristic::ReturnType getH() const { return h; }
+	size_t getNode() const { return node; }
+	size_t getParentNode() const { return node; }
+
+
+
+	bool operator<(const Node& other) { return  this->getScore() < other.getScore(); }
+	bool operator>(const Node& other) { return this->getScore > other.getScore(); }
+	bool operator==(const Node& other) { return this->GetID() == other.GetID(); }
+	
+	
+	Node& operator=(const Node& other) 
+	{
+		if (*this != other)
+		{
+			node = other.getNode();
+			parentNode = other.getParentNode();
+			g = other.getG();
+			h = other.getH();
+		}
+		return *this
+	}
+
+};
+
+
 //callback object for Astar
 template <typename GraphType, typename AstarType>
 class Callback {
@@ -146,8 +198,8 @@ class Astar {
         Callback<GraphType,Astar>  & callback;
         // the next 4 lines are just sugestions
         // OpenListContainer, ClosedListContainer, SolutionContainer are typedefed
-        OpenListContainer            openList;
-        ClosedListContainer          closedList;
+      std::priority_queue<Node>  OpenListContainer            openList;
+      std::list<Node>  ClosedListContainer          closedList;
         SolutionContainer            solution;
         size_t                       start_id,goal_id;
 };
