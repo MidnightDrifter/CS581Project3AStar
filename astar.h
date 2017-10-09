@@ -8,12 +8,12 @@
 
 
 
-template<typename NodeType, typename EdgeType>
+template<typename NodeType, typename EdgeType, typename Heuristic>
 class Node
 {
 private:
 	Node*  parentNode;
-	NodeType* node;
+	NodeType node;
 	typename Heuristic::ReturnType h;
 	typename Heuristic::ReturnType g;   //Check this, might just be float??
 	//float g;
@@ -21,17 +21,22 @@ private:
 	
 
 public:
-	Node(NodeType& n, Heuristic::ReturnType h1, float g1) : node(&n), g(g1), h(h1), p(NULL) {}
-	Node(NodeType& n, Heuristic::ReturnType h1, float g1, Node& p) : node(&n), g(g1), h(h1), parentNode(&p) {}
-	Node(Node& other) : node(other.getNode()), parentNode(other.getParentNode()), g(other.getG()), h(other.getH()) {}
-	
-	typename Heuristic::ReturnType getScore() { return h + g; }
-	size_t GetID() const { return node->GetID(); }
+	Node(NodeType& n, typename Heuristic::ReturnType h1, float g1) : parentNode(NULL), node(n), h(h1), g(g1)  {}
+	Node(NodeType& n, typename Heuristic::ReturnType h1, float g1, Node& p) : parentNode(&p),node(n), h(h1), g(g1) {}
+
+	Node(NodeType n, typename Heuristic::ReturnType h1, float g1) : parentNode(NULL),node(n),  h(h1), g(g1)  {}
+	Node(NodeType n, typename Heuristic::ReturnType h1, float g1, Node p) :parentNode(&p), node(n), h(h1), g(g1)   {}
+
+
+	Node(Node& other) : parentNode(other.getParentNode()), node(other.getNode()), h(other.getH()), g(other.getG()) {}
+	Node(const Node& other) : parentNode(other.getParentNode()), node(other.getNode()), h(other.getH()), g(other.getG()) {}
+	typename Heuristic::ReturnType getScore() const { return h + g; }
+	size_t GetID() const { return node.ID(); }
 	typename Heuristic::ReturnType getG() const{ return g; }
 	typename Heuristic::ReturnType getH() const { return h; }
-	NodeType* getNode() const { return node; }
+	NodeType getNode() const { return node; }
 	Node* getParentNode() const { return parentNode; }
-
+	/*
 	const Node& operator=(const Node& other)
 	{
 		if (*this != other)
@@ -44,22 +49,27 @@ public:
 
 		return *this;
 	}
+	*/
+	bool operator<(const Node& other) const { return ( getScore() < other.getScore()); }
+	bool operator>(const Node& other) const { return (getScore() > other.getScore()); }
+	bool operator==(const Node& other) const { return (GetID() == other.GetID()); }
+	
+//	constexpr bool operator<( const Node other) { return  this->getScore() < other.getScore(); }
+//	constexpr bool operator>(const Node other) { return this->getScore() > other.getScore(); }
+//	constexpr bool operator==(const Node other) { return this->GetID() == other.GetID(); }
 
-	bool operator<(const Node& other) { return  this->getScore() < other.getScore(); }
-	bool operator>(const Node& other) { return this->getScore > other.getScore(); }
-	bool operator==(const Node& other) { return this->GetID() == other.GetID(); }
-	
-	
-	Node& operator=(const Node& other) 
+
+
+	 Node& operator=(const Node& other) 
 	{
-		if (*this != other)
-		{
+		//if (*this != other)
+	//	{
 			node = other.getNode();
 			parentNode = other.getParentNode();
 			g = other.getG();
 			h = other.getH();
-		}
-		return *this
+	//	}
+			return *this;
 	}
 
 };
@@ -83,10 +93,11 @@ class Astar {
         ////////////////////////////////////////////////////////////
         Astar( GraphType const& _graph, Callback<GraphType,Astar> & cb ) : 
             graph(_graph),
+			callback(cb),
             openList(),
-            closedlist(),
+            closedList(),
             solution(),
-            callback(cb),
+            
             start_id(0),
             goal_id(0)
         {}
@@ -95,8 +106,15 @@ class Astar {
         void sample_function(size_t s, size_t g) {
             start_id = s;
             goal_id  = g;
-            openList.clear();
-            closedlist.clear();
+		//	openList.swap(std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>());
+          
+			while (openList.size() > 0)
+			{
+				openList.pop();
+			}
+			
+			
+			closedList.clear();
             solution.clear();
             Heuristic heuristic;
             // note "const&", since Graph returns const references, we save a 
@@ -121,8 +139,14 @@ class Astar {
         std::vector<typename GraphType::Edge> search(size_t s, size_t g) {
             start_id = s;
             goal_id  = g;
-            openList.clear();
-            closedList.clear();
+            //openList.swap(std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>());
+
+			while (openList.size() > 0)
+			{
+				openList.pop();
+			}
+			
+			closedList.clear();
             solution.clear();
             Heuristic heuristic;
             //heuristic from start to goal
@@ -162,8 +186,8 @@ std::map< VertexType, std::vector<EdgeType> > outgoining_edges;
 
 //openList.push(Node(vertex_start));
 //typename GraphType::Vertex currentNode;
-Node<GraphType::Vertex, GraphType::Edge> currentNode(vertex_start, h, 0), childNode(vertex_start,h,0);
-openList.push(vertex_start);
+Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> currentNode(vertex_start, h, 0), childNode(vertex_start,h,0);
+openList.push(currentNode);
 while (openList.size() > 0) {
 	callback.OnIteration(*this);
 
@@ -185,13 +209,13 @@ while (openList.size() > 0) {
 	currentNode = openList.top();
 	openList.pop();
 	//currentNode = openList.pop();
-	if (currentNode.GetID() == vertex_goal)
+	if (currentNode.GetID() == goal_id)
 	{
-		while (currentNode.GetID() != vertex_start)
+		while (currentNode.GetID() != start_id)
 		{
-			GraphType::Edge e;
-			std::vector<GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
-			for (int i = 0; i < outedges.size(); i++)
+//			typename GraphType::Edge e;
+			std::vector<typename GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
+			for (size_t i = 0; i < outedges.size(); i++)
 			{
 				if ((outedges[i].GetID1() == currentNode.GetID() && outedges[i].GetID2() == currentNode.getParentNode()->GetID()) || (outedges[i].GetID2() == currentNode.GetID() && outedges[i].GetID1() == currentNode.getParentNode()->GetID()))
 				{
@@ -201,7 +225,7 @@ while (openList.size() > 0) {
 
 			}
 			//solution.push_back(currentNode));
-			currentNode = currentNode->getParentNode();  //???
+			currentNode = *currentNode.getParentNode();  //???
 		}
 		break;
 	}
@@ -214,7 +238,7 @@ while (openList.size() > 0) {
 
 	//Is the 'g' value just the edge length + the parent's 'g value, or the edge length + the parent's 'g + h' value?
 	//Think just the edge + g
-	std::vector<GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
+	std::vector<typename GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
 	size_t childID;
 	//float gHolder;
 	//Heuristic::ReturnType hHolder;
@@ -224,12 +248,12 @@ while (openList.size() > 0) {
 
 	//Expand node!
 	bool isOnClosedList = false;
-	for (int i = 0; i < outedges.size();i++)
+	for (size_t i = 0; i < outedges.size();i++)
 	{
 	//	gHolder = currentNode.getG() + outedges[i].GetWeight();
 		isOnClosedList = false;
 
-		childID = outedges[i].getID1();
+		childID = outedges[i].GetID1();
 		
 		
 		if (outedges[i].GetID1() == currentNode.GetID())
@@ -238,7 +262,7 @@ while (openList.size() > 0) {
 		}
 
 
-		childNode = Node(graph.GetVertex(childID), heuristic(graph, graph.GetVertex(childID), vertex_goal), currentNode.getG() + outedges[i].GetWeight(), currentNode)
+		childNode = Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>(graph.GetVertex(childID), heuristic(graph, graph.GetVertex(childID), vertex_goal), currentNode.getG() + outedges[i].GetWeight(), currentNode);
 		//hHolder = Heuristic(graph, graph.GetVertex(otherID), vertex_goal);
 
 		//Check the closed list:  if a child is on it, check if the current node's g  (or g + h, potentially)  is <= than the one on the closed list
@@ -290,9 +314,9 @@ while (openList.size() > 0) {
         Callback<GraphType,Astar>  & callback;
         // the next 4 lines are just sugestions
         // OpenListContainer, ClosedListContainer, SolutionContainer are typedefed
-      std::priority_queue<Node>  openList;  //OpenListContainer             
-	  std::list<Node>         closedList;  //ClosedListContainer   
-        std::vector<GraphType::Edge>           solution;    //SolutionContainer
+      std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>  openList;  //OpenListContainer             
+	  std::list<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>         closedList;  //ClosedListContainer   
+        std::vector<typename GraphType::Edge>           solution;    //SolutionContainer
         size_t                       start_id,goal_id;
 };
 
