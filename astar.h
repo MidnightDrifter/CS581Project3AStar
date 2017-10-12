@@ -5,14 +5,14 @@
 #include <vector>
 #include <queue>
 #include <limits>
-
+#include <iostream>
 
 
 template<typename NodeType, typename EdgeType, typename Heuristic>
 class Node
 {
 private:
-	Node*  parentNode;
+	int  parentNodeIndex;
 	NodeType node;
 	typename Heuristic::ReturnType h;
 	typename Heuristic::ReturnType g;   //Check this, might just be float??
@@ -21,15 +21,16 @@ private:
 	
 
 public:
-	Node(NodeType& n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1) : parentNode(NULL), node(n), h(h1), g(g1)  {}
+	Node() : parentNodeIndex(-1), node(), h(-1), g(-1) {}
+	Node(NodeType& n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1) : parentNodeIndex(-1), node(n), h(h1), g(g1)  {}
 	//Node(NodeType& n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, Node& p) : parentNode(p),node(n), h(h1), g(g1) {}
 
-	Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1) : parentNode(NULL),node(n),  h(h1), g(g1)  {}
-	Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, Node p) :parentNode(&p), node(n), h(h1), g(g1)   {}
+	Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1) : parentNodeIndex(-1),node(n),  h(h1), g(g1)  {}
+	//Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, int& p) :parentNodeIndex(p), node(n), h(h1), g(g1)   {}
+	Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, int p) : parentNodeIndex(p), node(n), h(h1), g(g1) {}
+	Node(NodeType& n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, int p) : parentNodeIndex(p), node(n), h(h1),g(g1) {}
 
-	Node(NodeType& n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, Node* p) : parentNode(p), node(n), h(h1),g(g1) {}
-
-	Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, Node* p) : parentNode(p), node(n), h(h1), g(g1) {}
+	//Node(NodeType n, typename Heuristic::ReturnType h1, typename Heuristic::ReturnType g1, int p) : parentNode(p), node(n), h(h1), g(g1) {}
 
 
 //	Node(Node& other) : parentNode(other.getParentNode()), node(other.getNode()), h(other.getH()), g(other.getG()) {}
@@ -39,15 +40,16 @@ public:
 	typename Heuristic::ReturnType getG() const{ return g; }
 	typename Heuristic::ReturnType getH() const { return h; }
 	NodeType getNode() const { return node; }
-	Node* getParentNode() const { return parentNode; }
+	int getParentNode() const { return parentNodeIndex; }
 	
 	void setNode(NodeType& n) { node = n; }
 	void setNode(NodeType n) { node = n; }
 	
 //	void setParentNode(Node p) { parentNode = &p; }
-	void setParentNode( Node& p) { parentNode = &p; }
-	void setParentNode(const Node* p) { parentNode = p; }
-	void setParentNode(const Node& p) { parentNode = &p; }
+//	void setParentNode( Node& p) { *parentNode = p; }
+//	void setParentNode(const Node* p) { parentNode = p; }
+//	void setParentNode(const Node& p) { parentNode = &p; }
+	void setParentNode(int x) { parentNodeIndex = x; }
 
 
 
@@ -80,10 +82,10 @@ public:
 
 	 Node& operator=(const Node& other) 
 	{
-		//if (*this != other)
+		//if (*thisIndex != other)
 	//	{
 			node = other.getNode();
-			parentNode = other.getParentNode();
+			parentNodeIndex = other.getParentNode();
 			g = other.getG();
 			h = other.getH();
 	//	}
@@ -96,7 +98,7 @@ public:
 		 //if (*this != other)
 		 //	{
 		 node = other.getNode();
-		 parentNode = other.getParentNode();
+		 parentNodeIndex = other.getParentNode();
 		 g = other.getG();
 		 h = other.getH();
 		 //	}
@@ -182,11 +184,10 @@ class Astar {
             Heuristic heuristic;
             //heuristic from start to goal
 			typename GraphType::Vertex const& vertex_start = graph.GetVertex(start_id);
-			typename GraphType::Vertex const& vertex_goal = graph.GetVertex(goal_id);
+			//typename GraphType::Vertex const& vertex_goal = graph.GetVertex(goal_id);
 
             typename Heuristic::ReturnType h = heuristic( graph,graph.GetVertex(start_id),graph.GetVertex(goal_id) );
 			//Heuristic--graph, ID of first vertex to check, ID of second vertex to check
-
 
 /*Edges seem to have:  getID1(), getID2()  --  from vertex w/ ID1 to vertex w/ ID2
 getWeight()  -- self explanatory
@@ -221,6 +222,7 @@ std::map< VertexType, std::vector<EdgeType> > outgoining_edges;
 			Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>startNode(vertex_start,h,0);
 
 openList.push(startNode);
+nodePool.push_back(startNode);
 while (openList.size() > 0) {
 	callback.OnIteration(*this);
 
@@ -241,6 +243,7 @@ while (openList.size() > 0) {
 
 	//RINSE AND REPEAT
 	Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> currentNode = openList.top();
+	nodePool.push_back(currentNode);
 	openList.pop();
 	//currentNode = openList.pop();
 	if (currentNode.GetID() == goal_id)
@@ -251,7 +254,7 @@ while (openList.size() > 0) {
 			std::vector<typename GraphType::Edge> const& outedges = graph.GetOutEdges(currentNode.GetID());
 			for (size_t i = 0; i < outedges.size(); i++)
 			{
-				if ((outedges[i].GetID1() == currentNode.GetID() && outedges[i].GetID2() == currentNode.getParentNode()->GetID()) || (outedges[i].GetID2() == currentNode.GetID() && outedges[i].GetID1() == currentNode.getParentNode()->GetID()))
+				if ((outedges[i].GetID1() == currentNode.GetID() && outedges[i].GetID2() == nodePool[currentNode.getParentNode()].GetID()) || (outedges[i].GetID2() == currentNode.GetID() && outedges[i].GetID1() == nodePool[currentNode.getParentNode()].GetID()))
 				{
 					solution.push_back(outedges[i]);
 					i = outedges.size();
@@ -259,7 +262,7 @@ while (openList.size() > 0) {
 
 			}
 			//solution.push_back(currentNode));
-			currentNode = (*currentNode.getParentNode());  //???
+			currentNode = nodePool[(currentNode.getParentNode())];  //???
 		}
 		break;
 	}
@@ -290,21 +293,18 @@ while (openList.size() > 0) {
 
 		childID = outedges[i].GetID2();
 
+	//	std::cout << "Current Node parent address BEFORE updating child node:  " << currentNode.getParentNode() << std::endl;
 		
+		Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> childNode(graph.GetVertex(childID), heuristic(graph, graph.GetVertex(childID), graph.GetVertex(goal_id)), currentNode.getG() + outedges[i].GetWeight(),nodePool.size()-1);
 
-		Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> childNode(vertex_start,0,0);
+		//childNode.setG();
+///		childNode.setH();
+	//	childNode.setNode();
+	//	childNode.setParentNode(Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>(currentNode));
 
-		childNode.setG(currentNode.getG() + outedges[i].GetWeight());
-		childNode.setH(heuristic(graph, graph.GetVertex(childID), graph.GetVertex(goal_id)));
-		childNode.setNode(graph.GetVertex(childID));
-		childNode.setParentNode(Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>(currentNode));
+	//	std::cout << "Child Node parent address AFTER updating child node:  " << childNode.getParentNode() << std::endl;
+	//	std::cout << "Current Node parent address AFTER updating child node:  " << currentNode.getParentNode() << std::endl;
 
-
-		if (childNode.GetID() == childNode.getParentNode()->GetID())
-		{
-			int x = 0;
-			x++;
-		 }
 
 
 
@@ -367,6 +367,7 @@ while (openList.size() > 0) {
 	  std::list<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>         closedList;  //ClosedListContainer   
         std::vector<typename GraphType::Edge>           solution;    //SolutionContainer
         size_t                       start_id,goal_id;
+		std::vector<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>> nodePool;
 };
 
 #endif
