@@ -6,6 +6,7 @@
 #include <queue>
 #include <limits>
 #include <iostream>
+#include <set>
 
 
 template<typename NodeType, typename EdgeType, typename Heuristic>
@@ -70,8 +71,8 @@ public:
 		return *this;
 	}
 	*/
-	bool operator<(const Node& other) const { return ( getScore() > other.getScore()); }
-	bool operator>(const Node& other) const { return (getScore() < other.getScore()); }
+	bool operator<(const Node& other) const { return ( getScore() < other.getScore()); }
+	bool operator>(const Node& other) const { return (getScore() > other.getScore()); }
 	bool operator==(const Node& other) const { return (GetID() == other.GetID()); }
 	
 //	constexpr bool operator<( const Node other) { return  this->getScore() < other.getScore(); }
@@ -173,12 +174,14 @@ class Astar {
             start_id = s;
             goal_id  = g;
             //openList.swap(std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>());
-
+/*
 			while (openList.size() > 0)
 			{
 				openList.pop();
 			}
-			
+	*/
+
+			openList.clear();
 			closedList.clear();
             solution.clear();
             Heuristic heuristic;
@@ -220,8 +223,8 @@ std::map< VertexType, std::vector<EdgeType> > outgoining_edges;
 //typename GraphType::Vertex currentNode;
 
 			Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>startNode(vertex_start,h,0);
-
-openList.push(startNode);
+			openList.insert( startNode);
+//openList.push(startNode);
 nodePool.push_back(startNode);
 while (openList.size() > 0) {
 	callback.OnIteration(*this);
@@ -242,9 +245,11 @@ while (openList.size() > 0) {
 	//Finally, push parent onto closed list
 
 	//RINSE AND REPEAT
-	Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> currentNode = openList.top();
+	Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic> currentNode = *openList.begin();   //openList.top();
 	nodePool.push_back(currentNode);
-	openList.pop();
+	openList.erase(openList.begin());
+	//openList.pop()
+	
 	//currentNode = openList.pop();
 	if (currentNode.GetID() == goal_id)
 	{
@@ -319,7 +324,8 @@ while (openList.size() > 0) {
 				isOnClosedList = true;
 				if (childNode.getG() < j->getG())
 				{
-					openList.push(childNode);
+					openList.insert(childNode);
+					//openList.insert(childNode);
 					//openList.push(Node(currentNode->getNode(), hHolder, gHolder, currentNode));
 					j = closedList.erase(j);  //Remove at iterator j?   Also check this
 					//Push current node, or child node?   CHECK THIS!!
@@ -338,7 +344,8 @@ while (openList.size() > 0) {
 	
 		if (!isOnClosedList)
 		{
-			openList.push(childNode);
+			openList.insert(childNode);
+			//openList.insert(childNode);
 		}
 
 
@@ -363,8 +370,10 @@ while (openList.size() > 0) {
         Callback<GraphType,Astar>  & callback;
         // the next 4 lines are just sugestions
         // OpenListContainer, ClosedListContainer, SolutionContainer are typedefed
-      std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>  openList;  //OpenListContainer             
-	  std::list<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>         closedList;  //ClosedListContainer   
+     // std::priority_queue<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>  openList;  //OpenListContainer             
+	  
+		std::set<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>> openList;
+		std::list<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>>         closedList;  //ClosedListContainer   
         std::vector<typename GraphType::Edge>           solution;    //SolutionContainer
         size_t                       start_id,goal_id;
 		std::vector<Node<typename GraphType::Vertex, typename GraphType::Edge, Heuristic>> nodePool;

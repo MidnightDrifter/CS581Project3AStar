@@ -809,7 +809,7 @@ void (*pTests[])() = {
 
 int main(int argc, char *argv[] ) {
     if (argc >1) {
-        int test = 0;
+        int test = 1;
         std::sscanf(argv[1],"%i",&test);
         try {
             pTests[test]();
